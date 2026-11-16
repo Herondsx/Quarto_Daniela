@@ -239,6 +239,13 @@ export function analyze(dims, P) {
     if (top > sill + 2) add('aviso', `${cap(oa(it.id))} tampa parte da janela`, [it.id]);
   }
 
+  // 4b. TV ao lado da janela: a cortina aberta (o varão passa ~28 cm da janela) cobre a lateral
+  {
+    const t = R.tv;
+    const beside = norm(P.tv.rot) === 270 && t.z1 > wz0 - 28 && t.z0 < wz1 + 28 && !(t.z1 > wz0 && t.z0 < wz1);
+    if (beside) add('dica', 'A cortina aberta pode cobrir um pedaço da TV (o varão passa um pouco da janela)', ['tv']);
+  }
+
   // 5. TV atrás de móvel alto
   {
     const t = R.tv;

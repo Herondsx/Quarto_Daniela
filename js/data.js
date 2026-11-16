@@ -140,4 +140,29 @@ export const PRESETS = [
       };
     },
   },
+  {
+    id: 'ilhada',
+    tag: 'Sugestão 3',
+    name: 'Cabeceira ilhada + TV no canto',
+    desc: 'Ideia da Daniela: a TV vai para o lugar da estante (canto da janela) e a cama vira de frente para ela, com a cabeceira "ilhada", solta da parede. A estante fica atrás da cabeceira, de frente para o armário, e a mesa grande vai para a parede da moldura, colada na janela.',
+    pros: ['TV e cama juntas no canto, bem de frente uma para a outra', 'Estante atrás da cabeceira vira um "biombo" de livros', 'Mesa colada na janela e embaixo da moldura (sem mexer no gesso)', 'Cama longe da porta'],
+    cons: ['TV precisa ser furada na parede da janela, e a cortina aberta encosta na lateral dela', 'Cama encostada na parede: só se sai por um lado', 'Criado-mudo sai do lado da cama (vai para perto da mesa)', 'Estante solta: prender na cabeceira para não tombar', 'Cadeira um pouco justa'],
+    build(d) {
+      const { W, D } = d.room;
+      const I = d.items;
+      // cabeceira ilhada: a estante fica entre o espaço das portas do armário e a cabeceira
+      const bx = Math.min(I.wardrobe.d + 50 + I.bookshelf.d, W - I.bed.d);
+      const deskX0 = W - I.desk.w;
+      // TV no trecho da parede da janela antes da janela (onde fica a estante hoje)
+      const tvZ0 = Math.max(0, d.win.offset - I.tv.w - 4);
+      return {
+        wardrobe: wardrobePos(d),
+        bookshelf: put(d, 'bookshelf', 270, bx - I.bookshelf.d, 0),
+        bed: put(d, 'bed', 90, bx, 0),
+        desk: put(d, 'desk', 180, deskX0, D - I.desk.d),
+        nightstand: put(d, 'nightstand', 180, deskX0 - 3 - I.nightstand.w, D - I.nightstand.d),
+        tv: put(d, 'tv', 270, W - I.tv.d, tvZ0, { y: d.room.molding + 4 }),
+      };
+    },
+  },
 ];
