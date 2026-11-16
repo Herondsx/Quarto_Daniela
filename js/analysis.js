@@ -1,5 +1,5 @@
 // Análise do layout: sobreposições, porta, janela, espaço de uso e passagens.
-import { ITEMS, META, doorInfo, fsize, norm, oa } from './data.js';
+import { ITEMS, META, CHAIR_W, chairOffset, doorInfo, fsize, norm, oa } from './data.js';
 
 export function footprint(dims, id, p) {
   const { fw, fd } = fsize(dims.items[id], p.rot);
@@ -40,6 +40,23 @@ function frontGap(r, rot, o) {
     case 90: return o.x0 - r.x1;
     case 180: return r.z0 - o.z1;
     default: return r.x0 - o.x1;
+  }
+}
+
+// Parte da frente da mesa usada pela cadeira (em coordenadas do quarto).
+function chairSpan(dims, r, rot) {
+  const w = dims.items.desk.w;
+  const half = Math.min(w, CHAIR_W) / 2;
+  const co = chairOffset(w);
+  const a = Math.max(-w / 2, co - half);
+  const b = Math.min(w / 2, co + half);
+  const cx = (r.x0 + r.x1) / 2;
+  const cz = (r.z0 + r.z1) / 2;
+  switch (norm(rot)) {
+    case 0: return { ...r, x0: cx + a, x1: cx + b };
+    case 180: return { ...r, x0: cx - b, x1: cx - a };
+    case 90: return { ...r, z0: cz - b, z1: cz - a };
+    default: return { ...r, z0: cz + a, z1: cz + b };
   }
 }
 
@@ -234,12 +251,26 @@ export function analyze(dims, P) {
     }
   }
 
+  // 5b. moldura de gesso na parede da TV: nada alto pode encostar ali
+  {
+    const mh = dims.room.molding;
+    for (const id of floorIds) {
+      if (META[id].fixed || R[id].z1 < D - 8) continue;
+      if (heightAt(dims, id, P[id].rot, 'south') > mh - 3) {
+        add('aviso', `Para encostar ${oa(id)} na parede da TV teria que tirar a moldura de gesso`, [id]);
+      }
+    }
+    const p = P.tv;
+    if (norm(p.rot) === 180 && p.y < mh + 3 && p.y + I.tv.h > mh - 3) add('aviso', 'A TV ficaria em cima da moldura de gesso', ['tv']);
+  }
+
   // 6. espaço de uso na frente (cadeira, portas, gavetas)
   for (const it of ITEMS) {
     if (!it.clear) continue;
     const r = R[it.id];
     const rot = P[it.id].rot;
-    const zc = clip(frontZone(r, rot, it.clear), W, D);
+    const base = it.id === 'desk' ? chairSpan(dims, r, rot) : r;
+    const zc = clip(frontZone(base, rot, it.clear), W, D);
     zones[it.id] = { rect: zc, blocked: false };
     const fd = frontDir(rot);
     const toWall = fd[0] > 0 ? W - r.x1 : fd[0] < 0 ? r.x0 : fd[1] > 0 ? D - r.z1 : r.z0;
@@ -312,7 +343,7 @@ export function analyze(dims, P) {
     const len = Math.hypot(vx, vz) || 1;
     const ang = Math.round((Math.acos(Math.max(-1, Math.min(1, (vx * f[0] + vz * f[1]) / len))) * 180) / Math.PI);
     const tn = frontDir(P.tv.rot);
-    const facing = (tn[0] * -vx + tn[1] * -vz) / len > 0.3;
+    const facing = (tn[0] * -vx + tn[1] * -vz) / len > 0.64;
     if (!facing) add('dica', 'A tela da TV não fica virada para a cama', ['tv']);
     else if (ang <= 35) good.push('TV de frente para a cama');
     else add('dica', `TV fica de lado para quem está na cama (uns ${ang}°)`, ['tv', 'bed']);

@@ -11,9 +11,12 @@ Funciona no celular e no computador, sem instalar nada.
 - **Mover os móveis:** no computador, clique e arraste. No celular, toque no móvel para selecionar e depois arraste.
   Botões para **girar 90°**, **encostar na parede** e ajuste fino de 5 cm. A TV desliza pelas paredes e sobe/desce.
 - **Fixos:** armário, porta e janela não saem do lugar.
-- **Sugestões prontas:** "Como está hoje" + 3 sugestões de layout, cada uma com prós e contras e uma miniatura da planta.
-- **Avisos automáticos:** móveis sobrepostos, porta bloqueada, janela tampada, pouco espaço para a cadeira/gavetas/portas
-  do armário, passagens menores que 40 cm e se a TV fica de frente para a cama.
+- **Sugestões prontas:** "Como está hoje" + 2 sugestões de layout, cada uma com prós e contras e uma miniatura da planta.
+- **Parede da TV:** tem a moldura de gesso no meio da parede (com o papel listrado embaixo). Móveis baixos (mesa,
+  criado-mudo) cabem embaixo dela; se algo alto, como a estante, for encostado ali, o site avisa que seria preciso
+  tirar a moldura.
+- **Avisos automáticos:** móveis sobrepostos, porta bloqueada, janela tampada, móvel alto na moldura de gesso, pouco
+  espaço para a cadeira/gavetas/portas do armário, passagens menores que 40 cm e se a TV fica de frente para a cama.
 - **Medidas editáveis:** as medidas atuais são **estimativas** (feitas a partir da foto e do desenho; a única medida
   informada foi os 50 cm no pé da cama). Na aba **Medidas** dá para corrigir tudo com os valores da trena — as
   sugestões e os avisos se recalculam sozinhos.

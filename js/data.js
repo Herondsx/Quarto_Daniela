@@ -10,7 +10,8 @@
 //   270 = frente para o armário (costas na parede da janela)
 
 export const DEFAULT_DIMS = {
-  room: { W: 350, D: 250, H: 260 },
+  // molding = altura da moldura de gesso (roda-meio) na parede da TV
+  room: { W: 350, D: 250, H: 260, molding: 100 },
   // porta na parede do armário; "gap" = distância até a parede da TV
   door: { gap: 5, width: 75, height: 210 },
   // janela na parede oposta à porta; "offset" = distância da parede da cabeceira
@@ -20,7 +21,7 @@ export const DEFAULT_DIMS = {
     bed: { w: 140, d: 200, h: 95 },
     nightstand: { w: 45, d: 40, h: 55 },
     bookshelf: { w: 70, d: 35, h: 185 },
-    desk: { w: 120, d: 55, h: 75 },
+    desk: { w: 160, d: 55, h: 75 },
     tv: { w: 97, d: 6, h: 57 },
   },
 };
@@ -40,6 +41,11 @@ export const WINDOW_COLOR = '#6BA414';
 
 // "a cama", "o armário"
 export const oa = (id) => (META[id].g === 'f' ? 'a ' : 'o ') + META[id].low;
+
+// A cadeira fica um pouco à esquerda do meio da mesa (na frente do monitor).
+// O espaço da cadeira considera só a largura dela, não a mesa inteira.
+export const CHAIR_W = 80;
+export const chairOffset = (w) => -w * 0.12 + 4;
 
 export const norm = (r) => ((Math.round(r) % 360) + 360) % 360;
 
@@ -72,8 +78,8 @@ export const PRESETS = [
     id: 'atual',
     tag: 'Hoje',
     name: 'Como está hoje',
-    desc: 'O quarto como ele é agora: cabeceira na parede da esquerda (de quem entra), criado-mudo e estante no canto, mesa embaixo da janela e TV na parede da direita.',
-    pros: ['TV bem de frente para a cama', 'Mesa com luz natural da janela', 'Zero esforço: nada para carregar'],
+    desc: 'O quarto como ele é agora: cabeceira na parede da esquerda (de quem entra), criado-mudo e estante no canto, a mesa grande embaixo da janela e a TV centralizada com a cama, logo acima da moldura de gesso.',
+    pros: ['TV bem de frente para a cama', 'Mesa grande com luz natural da janela', 'Zero esforço: nada para carregar'],
     cons: ['Cadeira espremida entre a cama e a mesa', 'Passagem de só 50 cm no pé da cama', 'Criado-mudo tampa a parte de baixo da estante'],
     build(d) {
       const { W, D } = d.room;
@@ -85,39 +91,17 @@ export const PRESETS = [
         nightstand: put(d, 'nightstand', 0, bx + I.bed.w + 7, 0),
         bookshelf: put(d, 'bookshelf', 270, W - I.bookshelf.d, 0),
         desk: put(d, 'desk', 270, W - I.desk.d, I.bookshelf.w + 8),
-        tv: put(d, 'tv', 180, W - 70 - I.tv.w / 2, D - I.tv.d, { y: 85 }),
-      };
-    },
-  },
-  {
-    id: 'canto',
-    tag: 'Sugestão 1',
-    name: 'Cama no canto da janela',
-    desc: 'A cama vai para o canto, encostada na parede da janela. A mesa fica ao lado da cabeceira (servindo de apoio) e a estante e o criado-mudo vão para perto da porta.',
-    pros: ['Abre um espaço livre grande no meio do quarto', 'Cadeira com espaço de sobra', 'TV continua de frente para a cama (não precisa furar parede)', 'Estante fácil de alcançar logo na entrada'],
-    cons: ['Cama encostada na parede: só se sai por um lado', 'Mesa longe da janela', 'Mesa perto do armário: conferir se a 1ª porta abre inteira'],
-    build(d) {
-      const { W, D } = d.room;
-      const I = d.items;
-      const dc = d.door.width + 10;
-      const bx = W - I.bed.w;
-      return {
-        wardrobe: wardrobePos(d),
-        bed: put(d, 'bed', 0, bx, 0),
-        desk: put(d, 'desk', 0, bx - 2 - I.desk.w, 0),
-        bookshelf: put(d, 'bookshelf', 180, dc, D - I.bookshelf.d),
-        nightstand: put(d, 'nightstand', 180, dc + I.bookshelf.w + 5, D - I.nightstand.d),
-        tv: put(d, 'tv', 180, bx + I.bed.w / 2 - I.tv.w / 2, D - I.tv.d, { y: 85 }),
+        tv: put(d, 'tv', 180, bx + I.bed.w / 2 - I.tv.w / 2, D - I.tv.d, { y: d.room.molding + 4 }),
       };
     },
   },
   {
     id: 'estudos',
-    tag: 'Sugestão 2',
+    tag: 'Sugestão 1',
     name: 'Cantinho de estudos',
-    desc: 'Divide o quarto em duas zonas: mesa e estante juntas na parede da esquerda formam um cantinho de estudos, e a cama gira com a cabeceira embaixo da janela.',
-    pros: ['Área de estudo separada da área de dormir', 'Livros do lado da mesa', 'Entrada do quarto bem livre'],
-    cons: ['Cabeceira embaixo da janela (cortina e vento)', 'TV vai para cima da mesa e fica de lado para a cama', 'Cama encostada na parede da TV'],
+    desc: 'Divide o quarto em duas zonas: estante e mesa juntas na parede da esquerda viram um cantinho de estudos, e a cama gira com a cabeceira embaixo da janela, encostada na parede da TV (abaixo da moldura).',
+    pros: ['Área de estudo separada da área de dormir', 'Livros do lado da mesa', 'Não precisa mexer na moldura de gesso', 'Entrada do quarto bem livre'],
+    cons: ['Cabeceira embaixo da janela (cortina e vento)', 'TV muda de parede e fica de lado para a cama', 'Cama encostada na parede: só se sai por um lado', 'Cadeira um pouco justa'],
     build(d) {
       const { W, D } = d.room;
       const I = d.items;
@@ -135,23 +119,24 @@ export const PRESETS = [
   },
   {
     id: 'paredeTV',
-    tag: 'Sugestão 3',
-    name: 'Mesa na parede da TV',
-    desc: 'A cama gira e fica encostada na parede da esquerda, com a cabeceira do lado da janela. A mesa vai para a parede da TV e a TV sobe para cima dela (vira segunda tela).',
-    pros: ['Cama longe da porta (mais privacidade)', 'Janela livre, só com o criado-mudo embaixo', 'TV pode virar segunda tela do computador'],
-    cons: ['TV fica de lado para quem está na cama', 'Mesa de frente para a parede, longe da janela', 'Cama encostada na parede'],
+    tag: 'Sugestão 2',
+    name: 'Mesa embaixo da TV',
+    desc: 'A cama gira e vai para o canto da janela, encostada na parede da esquerda. A mesa grande cabe embaixo da moldura de gesso, na parede da TV, e a estante fica no pé da cama, de frente para o armário.',
+    pros: ['A mesa cabe embaixo da moldura, sem mexer no gesso', 'TV continua no mesmo lugar (sem furar parede)', 'Cama longe da porta (mais privacidade)', 'Janela livre, só com o criado-mudo embaixo'],
+    cons: ['TV fica de lado para quem está na cama', 'Monitor fica embaixo da TV (ou a TV vira a tela do computador)', 'Cama encostada na parede', 'Cadeira um pouco justa'],
     build(d) {
       const { W, D } = d.room;
       const I = d.items;
-      const dc = d.door.width + 10;
-      const deskX0 = dc + I.bookshelf.w + 5;
+      // a TV fica no mesmo furo de hoje (centralizada com a cama atual)
+      const tvX = I.wardrobe.d + 50 + I.bed.w / 2;
+      const deskX0 = Math.min(Math.max(d.door.width + 10, tvX - I.desk.w / 2), W - I.desk.w);
       return {
         wardrobe: wardrobePos(d),
         bed: put(d, 'bed', 270, W - I.bed.d, 0),
         nightstand: put(d, 'nightstand', 270, W - I.nightstand.d, I.bed.w + 3),
-        bookshelf: put(d, 'bookshelf', 180, dc, D - I.bookshelf.d),
+        bookshelf: put(d, 'bookshelf', 270, W - I.bed.d - I.bookshelf.d, 0),
         desk: put(d, 'desk', 180, deskX0, D - I.desk.d),
-        tv: put(d, 'tv', 180, deskX0 + I.desk.w / 2 - I.tv.w / 2, D - I.tv.d, { y: 128 }),
+        tv: put(d, 'tv', 180, tvX - I.tv.w / 2, D - I.tv.d, { y: d.room.molding + 4 }),
       };
     },
   },

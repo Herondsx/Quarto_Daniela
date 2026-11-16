@@ -15,7 +15,8 @@ const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const coarse = matchMedia('(pointer: coarse)').matches;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const mobileMQ = matchMedia('(max-width: 899px)');
-const STORE = 'quartoDaniela.v1';
+const STORE = 'quartoDaniela.v2';
+const STORE_OLD = 'quartoDaniela.v1';
 const HINT_KEY = 'quartoDaniela.hint';
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch { /* sem armazenamento */ } };
@@ -42,6 +43,7 @@ const ICON = {
   save: '<svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/></svg>',
   reset: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v5h5"/></svg>',
 };
+const MOLD = () => state.dims.room.molding + 4;
 const ARROW = { N: '↑', E: '→', S: '↓', W: '←' };
 
 // ---------- estado ----------
@@ -78,8 +80,13 @@ const validPositions = (p) => p && ITEMS.every((it) => p[it.id] && ['x', 'z', 'r
 
 function loadState() {
   try {
-    const s = JSON.parse(lsGet(STORE) || 'null');
-    if (s && s.v === 1) {
+    let s = JSON.parse(lsGet(STORE) || 'null');
+    if (!s) {
+      // versão anterior do site: a mesa estimada era de 120 cm; agora sabemos que é bem maior
+      s = JSON.parse(lsGet(STORE_OLD) || 'null');
+      if (s?.dims?.items?.desk?.w === 120) s.dims.items.desk.w = 160;
+    }
+    if (s && (s.v === 1 || s.v === 2)) {
       mergeDims(s.dims);
       if (validPositions(s.positions)) {
         state.positions = s.positions;
@@ -116,7 +123,8 @@ function loadState() {
     state.positions = pre.build(state.dims);
   }
   state.positions.wardrobe = wardrobePos(state.dims);
-  if (!Number.isFinite(state.positions.tv.y)) state.positions.tv.y = 85;
+  if (!Number.isFinite(state.positions.tv.y)) state.positions.tv.y = state.dims.room.molding + 4;
+  if (!pre) clampAll();
 }
 
 let saveT = 0;
@@ -124,7 +132,7 @@ function save() {
   clearTimeout(saveT);
   saveT = setTimeout(() => {
     lsSet(STORE, JSON.stringify({
-      v: 1, dims: state.dims, positions: state.positions, layoutId: state.layoutId, layoutName: state.layoutName,
+      v: 2, dims: state.dims, positions: state.positions, layoutId: state.layoutId, layoutName: state.layoutName,
       saved: state.saved, showClear: state.showClear, showLabels: state.showLabels,
     }));
   }, 300);
@@ -210,8 +218,7 @@ function rebuildAll() {
   if (room) {
     world.remove(room.root);
     disposeTree(room.root);
-    room.floorMat.map?.dispose();
-    room.floorMat.dispose();
+    room.disposables.forEach((d) => d.dispose());
   }
   room = buildRoom(state.dims);
   world.add(room.root);
@@ -248,7 +255,7 @@ function place(id, p, lift = 0) {
   const g = items[id];
   g.position.set(p.x, lift, p.z);
   g.rotation.y = THREE.MathUtils.degToRad(p.rot);
-  if (id === 'tv') setTVElevation(g, p.y ?? 85);
+  if (id === 'tv') setTVElevation(g, p.y ?? MOLD());
 }
 
 // ---------- animação entre layouts ----------
@@ -272,8 +279,8 @@ function stepTween(now) {
     const f = tween.from[it.id];
     const t = tween.to[it.id];
     const dr = ((((t.rot - f.rot) % 360) + 540) % 360) - 180;
-    const fy = f.y ?? 85;
-    const ty = t.y ?? 85;
+    const fy = f.y ?? MOLD();
+    const ty = t.y ?? MOLD();
     const p = { x: f.x + (t.x - f.x) * e, z: f.z + (t.z - f.z) * e, rot: f.rot + dr * e, y: fy + (ty - fy) * e };
     const moved = Math.hypot(t.x - f.x, t.z - f.z) > 5 || Math.abs(dr) > 1;
     const lift = moved && !it.wall && k < 1 ? Math.sin(Math.PI * e) * 10 : 0;
@@ -394,7 +401,7 @@ function mkLabel(cls, html) {
 }
 const itemLabels = {};
 for (const it of ITEMS) itemLabels[it.id] = mkLabel('tag', `<i style="background:${it.color}"></i>${it.short}`);
-const roomLabels = { door: mkLabel('tag room', 'Porta'), win: mkLabel('tag room', 'Janela'), w: mkLabel('measure', ''), d: mkLabel('measure', '') };
+const roomLabels = { door: mkLabel('tag room', 'Porta'), win: mkLabel('tag room', 'Janela'), mold: mkLabel('tag room', ''), w: mkLabel('measure', ''), d: mkLabel('measure', '') };
 const gapEls = [0, 1, 2, 3].map(() => mkLabel('dimtag', ''));
 const v3 = new THREE.Vector3();
 function placeLabel(el, x, y, z, cam) {
@@ -420,7 +427,7 @@ function updateLabels() {
     let y = plan ? dm.h : dm.h + 16;
     if (it.id === 'bed' && !plan) y = 80;
     if (it.id === 'tv') {
-      y = (p.y ?? 85) + dm.h + (plan ? 0 : 10);
+      y = (p.y ?? MOLD()) + dm.h + (plan ? 0 : 10);
       if (plan) {
         const r = norm(p.rot);
         const f = { 0: [0, 1], 90: [1, 0], 180: [0, -1], 270: [-1, 0] }[r] || [0, 0];
@@ -438,6 +445,8 @@ function updateLabels() {
     roomLabels.w.textContent = fmtM(W);
     roomLabels.d.textContent = fmtM(D);
     placeLabel(roomLabels.w, W / 2, 0, -30, cam);
+    roomLabels.mold.textContent = `Parede da TV · moldura de gesso a ${fmtM(state.dims.room.molding)}`;
+    placeLabel(roomLabels.mold, W / 2, 0, D + 30, cam);
     placeLabel(roomLabels.d, -30, 0, Math.min(D / 2, di.z0 / 2), cam);
   } else {
     Object.values(roomLabels).forEach(hide);
@@ -752,7 +761,7 @@ function renderItems() {
     const dm = state.dims.items[id];
     const p = state.positions[id];
     h += `<div class="detail"><div class="detail-head"><span class="sw" style="background:${it.color}"></span><h4>${it.name}</h4>${it.fixed ? '<span class="pill now">fixo</span>' : ''}</div>`;
-    h += `<div class="size">${dm.w} × ${dm.d} cm · ${it.wall ? `a ${Math.round(p.y ?? 85)} cm do chão` : `${dm.h} cm de altura`}</div>`;
+    h += `<div class="size">${dm.w} × ${dm.d} cm · ${it.wall ? `a ${Math.round(p.y ?? MOLD())} cm do chão` : `${dm.h} cm de altura`}</div>`;
     if (!it.wall) h += `<div class="gaps" id="gapsBox">${gapsHTML(id)}</div>`;
     if (it.fixed) {
       h += '<p class="muted">O armário não sai do lugar — ele é a referência do quarto.</p>';
@@ -786,6 +795,7 @@ const DIM_GROUPS = [
     ['room.W', 'Comprimento', 'da parede do armário até a janela', 200, 800],
     ['room.D', 'Largura', 'da parede da cabeceira até a da TV', 180, 700],
     ['room.H', 'Altura do teto', '', 200, 400],
+    ['room.molding', 'Moldura de gesso', 'altura na parede da TV', 30, 250],
   ] },
   { title: 'Porta', color: DOOR_COLOR, fields: [
     ['door.width', 'Largura da porta', '', 50, 120],
@@ -954,7 +964,7 @@ function act(a) {
     setPos(id, { ...p, ...backToWall(id, p) }, true);
   } else if ((a === 'up' || a === 'down') && it.wall) {
     pushUndo();
-    const y = clamp((p.y ?? 85) + (a === 'up' ? 5 : -5), 10, state.dims.room.H - state.dims.items.tv.h - 5);
+    const y = clamp((p.y ?? MOLD()) + (a === 'up' ? 5 : -5), 10, state.dims.room.H - state.dims.items.tv.h - 5);
     setPos(id, { ...p, y }, false);
   }
 }

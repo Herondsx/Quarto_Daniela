@@ -3,7 +3,7 @@
 // profundidade no eixo z, costas em -z e frente em +z.
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/RoundedBoxGeometry.js';
-import { doorInfo } from './data.js';
+import { doorInfo, chairOffset } from './data.js';
 
 const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0, ...o });
 
@@ -90,6 +90,26 @@ function floorTexture() {
   floorTex.colorSpace = THREE.SRGBColorSpace;
   floorTex.anisotropy = 8;
   return floorTex;
+}
+
+let stripeTex = null;
+function stripeTexture() {
+  if (stripeTex) return stripeTex;
+  // um ciclo de 19 cm: faixa cinza larga, branco, faixa fina, branco (como no vídeo)
+  const c = document.createElement('canvas');
+  c.width = 190;
+  c.height = 8;
+  const x = c.getContext('2d');
+  x.fillStyle = '#ece7e2';
+  x.fillRect(0, 0, 190, 8);
+  x.fillStyle = '#aea6ab';
+  x.fillRect(0, 0, 50, 8);
+  x.fillRect(110, 0, 25, 8);
+  stripeTex = new THREE.CanvasTexture(c);
+  stripeTex.wrapS = THREE.RepeatWrapping;
+  stripeTex.colorSpace = THREE.SRGBColorSpace;
+  stripeTex.anisotropy = 4;
+  return stripeTex;
 }
 
 export const MAT = {
@@ -205,10 +225,11 @@ export function buildRoom(dims) {
 
   // chão de madeira
   const tex = floorTexture();
-  const floorMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55 });
-  floorMat.map = tex.clone();
-  floorMat.map.needsUpdate = true;
-  floorMat.map.repeat.set(W / 240, D / 120);
+  const floorMap = tex.clone();
+  floorMap.needsUpdate = true;
+  floorMap.repeat.set(W / 240, D / 120);
+  const floorMat = new THREE.MeshStandardMaterial({ map: floorMap, roughness: 0.55 });
+  const disposables = [floorMap, floorMat];
   const floor = new THREE.Mesh(new THREE.PlaneGeometry(W, D), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.position.set(W / 2, 0, D / 2);
@@ -237,6 +258,21 @@ export function buildRoom(dims) {
     const doors = openings.filter((o) => o.type === 'door');
 
     full.add(wallMesh(df.len, H, openings));
+    if (name === 'south') {
+      // parede da TV: papel listrado até a moldura de gesso (roda-meio)
+      const mh = dims.room.molding;
+      const map = stripeTexture().clone();
+      map.needsUpdate = true;
+      map.repeat.set(df.len / 19, 1);
+      const stripeMat = new THREE.MeshStandardMaterial({ map, roughness: 0.9 });
+      disposables.push(map, stripeMat);
+      const paper = new THREE.Mesh(new THREE.PlaneGeometry(df.len, mh - 3), stripeMat);
+      paper.position.set(df.len / 2, (mh - 3) / 2, 0.2);
+      paper.receiveShadow = true;
+      full.add(paper);
+      box(full, df.len, 6, 3, df.len / 2, mh - 3, 1.5, MAT.trim, { cast: false });
+      box(full, df.len, 1.5, 4, df.len / 2, mh - 3.5, 2, MAT.trim, { cast: false });
+    }
     for (const [a, b] of segments(0, df.len, doors)) box(full, b - a, 7, 1.5, (a + b) / 2, 0, 0.75, MAT.trim, { cast: false });
     box(full, df.len, 6, 4, df.len / 2, H - 6, 2, MAT.trim, { cast: false });
     const e0 = df.ext ? -T : 0;
@@ -295,7 +331,7 @@ export function buildRoom(dims) {
   cyl(ceiling, 19, 19, 3, W / 2, H - 3, D / 2, MAT.lampCeil, { cast: false, seg: 32 });
   root.add(ceiling);
 
-  return { root, walls, ceiling, floorMat, doorLeaf: pivot };
+  return { root, walls, ceiling, disposables, doorLeaf: pivot };
 }
 
 function wallMesh(len, H, openings) {
@@ -624,7 +660,7 @@ function buildDesk({ w, d, h }) {
   }
 
   const chair = buildChair();
-  chair.position.set(mx + 4, 0, d / 2 + 24);
+  chair.position.set(chairOffset(w), 0, d / 2 + 24);
   chair.rotation.y = Math.PI + 0.18;
   g.add(chair);
   return g;
